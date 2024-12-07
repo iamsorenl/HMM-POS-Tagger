@@ -305,13 +305,31 @@ def main():
         confusion.update((t, p) for t, p in zip(true_tags, predicted_tags))
 
     # Calculate precision, recall, and F1 score
-    precision = {tag: confusion[(tag, tag)] / sum(confusion[(t, tag)] for t in unique_tags) for tag in unique_tags}
-    recall = {tag: confusion[(tag, tag)] / sum(confusion[(tag, p)] for p in unique_tags) for tag in unique_tags}
-    f1 = {tag: 2 * precision[tag] * recall[tag] / (precision[tag] + recall[tag]) if precision[tag] + recall[tag] > 0 else 0 for tag in unique_tags}
+    precision = {}
+    recall = {}
+    f1 = {}
 
-    macro_precision = sum(precision.values()) / len(unique_tags)
-    macro_recall = sum(recall.values()) / len(unique_tags)
-    macro_f1 = sum(f1.values()) / len(unique_tags)
+    for tag in unique_tags:
+        precision_denominator = sum(confusion[(t, tag)] for t in unique_tags)
+        recall_denominator = sum(confusion[(tag, p)] for p in unique_tags)
+        
+        if precision_denominator > 0:
+            precision[tag] = confusion[(tag, tag)] / precision_denominator
+        else:
+            precision[tag] = 0.0  # No predictions for this tag
+
+        if recall_denominator > 0:
+            recall[tag] = confusion[(tag, tag)] / recall_denominator
+        else:
+            recall[tag] = 0.0  # No true labels for this tag
+
+        if precision[tag] + recall[tag] > 0:
+            f1[tag] = 2 * precision[tag] * recall[tag] / (precision[tag] + recall[tag])
+        else:
+            f1[tag] = 0.0  # Precision and recall are both zero
+        macro_precision = sum(precision.values()) / len(unique_tags)
+        macro_recall = sum(recall.values()) / len(unique_tags)
+        macro_f1 = sum(f1.values()) / len(unique_tags)
 
     print(f"Test Set Accuracy: {correct / total:.2%}")
     print(f"Baseline Accuracy: {baseline_accuracy:.2%}")
