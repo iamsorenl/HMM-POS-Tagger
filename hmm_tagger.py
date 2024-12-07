@@ -17,46 +17,46 @@ def viterbi(sentence, tags, transition_probs, emission_probs):
     backpointer = defaultdict(dict)
 
     # Initialization
+    #print("Starting Initialization Step...")
     for tag in tags:
-        viterbi_table[tag][1] = (
-            math.log(transition_probs.get(("<START>", tag), 1e-10)) +
-            math.log(emission_probs.get((sentence[0], tag), 1e-10))
-        )
+        transition_prob = transition_probs.get(("<START>", tag), math.log(1e-10))
+        emission_prob = emission_probs.get((sentence[0], tag), math.log(1e-10))
+        viterbi_table[tag][1] = transition_prob + emission_prob
         backpointer[tag][1] = "<START>"
+        #print(f"Init {tag}: Transition={transition_prob}, Emission={emission_prob}, Total={viterbi_table[tag][1]}")
 
     # Recursion Step
-    for t in range(2, len(sentence) + 1):  # Include all time steps
+    #print("Starting Recursion Step...")
+    for t in range(2, len(sentence) + 1):
         for tag_curr in tags:
             max_prob = -math.inf
             best_prev_tag = None
             for tag_prev in tags:
-                prob = (
-                    viterbi_table[tag_prev][t-1] +
-                    math.log(transition_probs.get((tag_prev, tag_curr), 1e-10)) +
-                    math.log(emission_probs.get((sentence[t-1], tag_curr), 1e-10))
-                )
+                transition_prob = transition_probs.get((tag_prev, tag_curr), math.log(1e-10))
+                emission_prob = emission_probs.get((sentence[t-1], tag_curr), math.log(1e-10))
+                prob = viterbi_table[tag_prev][t-1] + transition_prob + emission_prob
+                #print(f"Step {t}, From {tag_prev} to {tag_curr}: Transition={transition_prob}, Emission={emission_prob}, Total={prob}")
                 if prob > max_prob:
                     max_prob = prob
                     best_prev_tag = tag_prev
-
             viterbi_table[tag_curr][t] = max_prob
             backpointer[tag_curr][t] = best_prev_tag
 
     # Termination
+    #print("Starting Termination Step...")
     max_prob = -math.inf
     best_last_tag = None
     for tag in tags:
-        prob = (
-            viterbi_table[tag][len(sentence)] +
-            math.log(transition_probs.get((tag, "<STOP>"), 1e-10))
-        )
+        transition_prob = transition_probs.get((tag, "<STOP>"), math.log(1e-10))
+        prob = viterbi_table[tag][len(sentence)] + transition_prob
+        #print(f"Termination {tag}: Transition={transition_prob}, Total={prob}")
         if prob > max_prob:
             max_prob = prob
             best_last_tag = tag
 
     # Backtrace
     best_path = [best_last_tag]
-    for t in range(len(sentence), 1, -1):  # Trace back from the last word to the first
+    for t in range(len(sentence), 1, -1):
         best_path.insert(0, backpointer[best_path[0]][t])
 
     return best_path, max_prob
@@ -188,37 +188,80 @@ def baseline_model(train, test):
 
     return correct / total
 
-def debug_single_example(train):
+def debug_single_example():
     """
-    Debug by training and testing on a single example.
+    Debug using the example from the assignment PDF.
     """
-    example = train[0]
-    words_tags = example.split()
-    words = [wt.rsplit("/", 1)[0] for wt in words_tags[1:-1]]
-    true_tags = [wt.rsplit("/", 1)[1] for wt in words_tags[1:-1]]
+    # Words and tags from the PDF example
+    words = ["example_word1", "example_word2"]
+    true_tags = ["VB", "NN"]
 
-    # Calculate counts for the single example
-    tag_bigrams, word_tag_counts, tag_counts = calculate_counts([example])
-    unique_tags = list(tag_counts.keys())
-    vocab = {word for (word, _) in word_tag_counts.keys()}
+    # Hardcoded transition probabilities
+    transition_probs = {
+        ("<START>", "VB"): 4,
+        ("VB", "NN"): 9,
+        ("NN", "<STOP>"): 1,
+    }
+    # Hardcoded emission probabilities
+    emission_probs = {
+        ("example_word1", "VB"): 1,
+        ("example_word2", "NN"): 1,
+    }
 
-    # Compute transition and emission probabilities
-    transition_probs = compute_transition_probabilities(tag_bigrams, tag_counts, 1.0, unique_tags)
-    emission_probs = compute_emission_probabilities(word_tag_counts, tag_counts, 1.0, vocab)
+    # Convert probabilities to log space
+    transition_probs = {k: math.log(v) for k, v in transition_probs.items()}
+    emission_probs = {k: math.log(v) for k, v in emission_probs.items()}
 
-    # Run Viterbi algorithm
-    predicted_tags, prob = viterbi(words, unique_tags, transition_probs, emission_probs)
+    # Default missing probabilities to math.log(1e-10)
+    for k in [("<START>", "VB"), ("VB", "NN"), ("NN", "<STOP>")]:
+        if k not in transition_probs:
+            transition_probs[k] = math.log(1e-10)
+    for k in [("example_word1", "VB"), ("example_word2", "NN")]:
+        if k not in emission_probs:
+            emission_probs[k] = math.log(1e-10)
+
+    # Calculate the gold sequence score
+    gold_score = (
+        transition_probs[("<START>", true_tags[0])] +
+        emission_probs[(words[0], true_tags[0])] +
+        transition_probs[(true_tags[0], true_tags[1])] +
+        emission_probs[(words[1], true_tags[1])] +
+        transition_probs[(true_tags[1], "<STOP>")]
+    )
+
+    # Run Viterbi to get predicted tags and score
+    predicted_tags, predicted_score = viterbi(words, ["VB", "NN"], transition_probs, emission_probs)
+
+    # Output the results
     print(f"Sentence: {' '.join(words)}")
     print(f"True Tags: {true_tags}")
     print(f"Predicted Tags: {predicted_tags}")
-    print(f"Probability of Predicted Tags: {prob}")
+    print(f"Gold Sequence Score: {gold_score}")
+    print(f"Viterbi Predicted Score: {predicted_score}")
+
+    # Validate the outputs
+    if not math.isclose(gold_score, predicted_score, rel_tol=1e-9):
+        print("Mismatch detected!")
+        print("Gold Score Calculation Breakdown:")
+        print(f"    Transition (<START> -> {true_tags[0]}): {transition_probs[('<START>', true_tags[0])]}")
+        print(f"    Emission ({words[0]} -> {true_tags[0]}): {emission_probs[(words[0], true_tags[0])]}")
+        print(f"    Transition ({true_tags[0]} -> {true_tags[1]}): {transition_probs[(true_tags[0], true_tags[1])]}")
+        print(f"    Emission ({words[1]} -> {true_tags[1]}): {emission_probs[(words[1], true_tags[1])]}")
+        print(f"    Transition ({true_tags[1]} -> <STOP>): {transition_probs[(true_tags[1], '<STOP>')]}")
+    assert math.isclose(gold_score, predicted_score, rel_tol=1e-9), \
+        "Viterbi failed to find the highest scoring sequence!"
+    assert predicted_tags == true_tags, \
+        "Viterbi predicted the wrong sequence!"
+
+    print("Debugging successful: Viterbi finds the correct sequence with the correct score.")
 
 def main():
     datadir = os.path.join("data", "penn-treeban3-wsj", "wsj")
     train, dev, test = load_treebank_splits(datadir)
     train, dev, test = map(add_start_stop, [train, dev, test])
     
-    debug_single_example(train)
+    # Debugging using the example from the assignment PDF
+    debug_single_example()
 
     # Calculate counts for the training data
     tag_bigrams, word_tag_counts, tag_counts = calculate_counts(train)
