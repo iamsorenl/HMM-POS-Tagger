@@ -9,7 +9,6 @@ This project implements a **Hidden Markov Model (HMM)** for Part-of-Speech (POS)
 - [Project Overview](#project-overview)
 - [Requirements](#requirements)
 - [Installation](#installation)
-- [Dataset Structure](#dataset-structure)
 - [Usage](#usage)
 - [Training the Model](#training-the-model)
 - [Evaluation](#evaluation)
@@ -72,29 +71,6 @@ source venv/bin/activate
 # Activate on Windows
 venv\Scripts\activate
 ```
-
----
-
-## Dataset Structure
-
-Ensure the following files are present in the project directory:
-
-- `train.csv`: Training dataset with sentences and POS tags.
-- `test.csv`: Test dataset containing sentences for tagging.
-
-### Example Data Format
-
-**Training Dataset (`train.csv`):**
-
-| ID  | Sentence                          | POS Tags                  |
-|-----|-----------------------------------|---------------------------|
-| 1   | The quick brown fox jumps         | DT JJ JJ NN VBZ           |
-
-**Test Dataset (`test.csv`):**
-
-| ID  | Sentence                          |
-|-----|-----------------------------------|
-| 1   | The lazy dog sleeps               |
 
 ---
 
