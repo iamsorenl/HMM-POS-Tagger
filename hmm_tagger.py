@@ -285,6 +285,9 @@ def main():
         if accuracy > best_accuracy:
             best_alpha, best_accuracy = alpha, accuracy
 
+    # Add this line after the loop
+    print(f"Best alpha: {best_alpha} with accuracy: {best_accuracy:.2%}")
+
     # Compute final transition and emission probabilities with best alpha
     transition_probs = compute_transition_probabilities(tag_bigrams, tag_counts, best_alpha, unique_tags)
     emission_probs = compute_emission_probabilities(word_tag_counts, tag_counts, best_alpha, vocab)
