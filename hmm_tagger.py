@@ -307,6 +307,7 @@ def main():
         total += len(true_tags)
         confusion.update((t, p) for t, p in zip(true_tags, predicted_tags))
 
+
     # Calculate precision, recall, and F1 score
     precision = {}
     recall = {}
@@ -338,9 +339,12 @@ def main():
     print(f"Baseline Accuracy: {baseline_accuracy:.2%}")
     print(f"Macro Precision: {macro_precision:.2%}, Macro Recall: {macro_recall:.2%}, Macro F1: {macro_f1:.2%}")
 
-    print("\nConfusion Matrix (Top 10):")
-    for (true, pred), count in confusion.most_common(10):
-        print(f"True: {true}, Predicted: {pred}, Count: {count}")
+    # Output the full confusion matrix to a file
+    with open("confusion_matrix.txt", "w") as f:
+        f.write("True Tag\tPredicted Tag\tCount\n")
+        for (true, pred), count in confusion.items():
+            f.write(f"{true}\t{pred}\t{count}\n")
+
 
 if __name__ == "__main__":
     main()
